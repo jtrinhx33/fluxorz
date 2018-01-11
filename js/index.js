@@ -47,6 +47,7 @@ function fetchProjects() {
     var options = projects.map(function(project) {
       return $('<option>').val(project.id).text(project.name)
     })
+
     // insert the default text as the first option
     options.unshift('<option>Please select a project</option>')
     // make sure the select box is empty and then insert the new options
@@ -58,7 +59,23 @@ function fetchProjects() {
       // find the project that was clicked on, and assign it to the global
       // variable 'selectedProject'
       selectedProject = projects.filter(function(p) { return p.id === e.target.value })[0]
-// now go fetch the project's cells (keys)
+      var c = $('#console')
+      c.val('')
+      var notificationHandler = function(msg) {
+        //write all events to the app console
+        c.val(c.val() + msg.type + ': \'' + msg.body.label + '\'\n')
+
+        if (msg.type === "CELL_MODIFIED") {
+          //only render when the modification involves the selected output
+          if(selectedOutputCell && (selectedOutputCell.id === msg.body.id)) {
+            getValue(selectedProject, selectedOutputCell).then(render)
+          }
+        }
+      }
+
+      //listens and responds to changes on flux using our handler
+      createWebSocket(selectedProject, notificationHandler)
+      // now go fetch the project's cells (keys)
       fetchCells()
     })
   })
@@ -103,6 +120,53 @@ function initCells() {
       })
     }
   })
+
+  // attach a function to the change event of the slider's (input) select box
+  $('#input select.cell').on('change', function(e) {
+    // find the cell that was clicked on
+    var selectedCell = projectCells.filter(function(k) { return k.id === e.target.value })[0]
+    // and attach it to the slider so we can grab it later
+    $('#input input').data('cell', selectedCell)
+  })
+
+  // attach a function to the change event of the slider
+  $('#input input').on('change', function(e) {
+    // find the cell that was clicked on (we attached it in the previous function)
+    var cell = $(e.target).data('cell')
+    // update the display with the new value
+    $('#input .label .value').html(e.target.value)
+    // and if we have a cell
+    if (cell) {
+      // tell flux to update the cell with this new value
+      updateCellValue(selectedProject, cell, parseFloat(e.target.value))
+    }
+  })
+
+  // initialize the slider's displayed value
+  $('#input .label .value').html($('#input input').val())
+}
+
+/**
+ * Initialize the create cell (key) input + button.
+ */
+function initCreate() {
+  $('#create .button').on('click', function(e) {
+    // get the input field
+    var input = $(e.target).parent().find('input')
+    // get the input field value
+    var value = input.val()
+    // check we have a name
+    if (value === '') return
+    // check we have a project selected
+    if (!selectedProject) return
+    // create the cell (key)
+    createCell(selectedProject, value).then(function() {
+      // clear the input
+      input.val('')
+      // refresh the cell (key) select boxes
+      fetchCells()
+    })
+  })
 }
 
 /**
@@ -119,12 +183,16 @@ function init() {
         hideLogin()
         // create the viewport
         initViewport()
+
         //manually set the viewport's geometry to box_data
-        viewport.setGeometryEntity(box_data)
-        // get the user's projects from Flux
-        fetchProjects()
+        //viewport.setGeometryEntity(box_data)
+
         // prepare the cell (key) select boxes
         initCells()
+        // prepare the create key input + button
+        initCreate()
+        // get the user's projects from Flux
+        fetchProjects()
       } else {
         showLogin();
       }
