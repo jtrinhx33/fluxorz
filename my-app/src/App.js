@@ -4,22 +4,47 @@ import './App.css';
 import Login from './components/Login';
 import Viewport from './components/Viewport';
 import helpers from './helpers.js';
-//import config from './config.js'
+import box_data from './box.js'
+
+function Logout(props) {
+  return (
+    <button className="Logout" onClick={props.onClick}>
+      Logout
+    </button>
+  );
+}
 
 class App extends Component {
 
+  constructor(props) {
+    super(props);
+    this.state = {
+      isLoggedIn: false,
+      viewport: null,
+    };
+
+    this.initViewport = this.initViewport.bind(this);
+
+    this.init();
+  }
+
   init() {
+    var self = this;
     // Check if we're coming back from Flux with the login credentials.
     helpers.storeFluxUser()
+    .then(function() {
+      return helpers.isLoggedIn()
+    })
     // check that the user is logged in, otherwise show the login page
-    .then(function() { return helpers.isLoggedIn() })
     .then(function(isLoggedIn) {
       if (isLoggedIn) {
-        alert('Is logged in');
-        // if logged in, make sure the login page is hidden
-        //hideLogin()
+
+        //const loggedIn = helpers.isLoggedIn();
+        self.setState({
+          isLoggedIn: true,
+        });
         // create the viewport
-        //initViewport()
+        self.initViewport();
 
         //manually set the viewport's geometry to box_data
         //viewport.setGeometryEntity(box_data)
@@ -31,18 +56,29 @@ class App extends Component {
         // get the user's projects from Flux
         //fetchProjects()
       } else {
-        //showLogin();
+        self.setState({
+          isLoggedIn: true,
+        });
       }
-    })
+    });
   }
 
   handleLogin() {
+    var self = this;
     helpers.redirectToFluxLogin()
+    .then(function() {
+      const loggedIn = helpers.isLoggedIn();
+      self.setState({
+        isLoggedIn: loggedIn,
+      });
+    });
+  }
 
-    // Check if we're coming back from Flux with the login credentials.
-    //helpers.storeFluxUser();
-
-    //this.initViewport();
+  handleLogout() {
+    helpers.logout();
+    this.setState({
+      isLoggedIn: false,
+    });
   }
 
   /**
@@ -50,32 +86,47 @@ class App extends Component {
   */
   initViewport() {
     // attach the viewport to the #div view
-    var viewport = new window.FluxViewport(document.querySelector("#view"));
+    //var viewport = new window.FluxViewport(document.querySelector("#view"));
+    var viewport = new window.FluxViewport(this.view);
     // set up default lighting for the viewport
     viewport.setupDefaultLighting();
     // set the viewport background to white
     viewport.setClearColor(0xffffff);
+
+    viewport.setGeometryEntity(box_data);
+
+    this.setState({
+      viewport: viewport,
+    });
   }
 
   render() {
-    this.init();
 
     return (
       <div className="App">
         <header className="App-header">
           <img src={logo} className="App-logo" alt="logo" />
-          <h1 className="App-title">Welcome to React</h1>
+          <h1 className="App-title">Welcome to Fluxorz!</h1>
         </header>
-        <p className="App-intro">
-          To get started, edit <code>src/App.js</code> and save to reload.
-        </p>
 
-        <Login
-          showLogin={true}
-          onClick={() => this.handleLogin()}
-        />
-
-        <Viewport />
+        {this.state.isLoggedIn ?
+          <div>
+            <p className="App-intro">
+              You are logged in!
+            </p>
+            <Logout
+              onClick={() => this.handleLogout()}
+            />
+            <div id="view"
+              ref = {(view) => this.view = view}
+            >
+            </div>
+          </div>
+          :
+          <Login
+            onClick={() => this.handleLogin()}
+          />
+        }
 
       </div>
     );
