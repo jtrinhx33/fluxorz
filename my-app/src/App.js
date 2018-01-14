@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import logo from './logo.svg';
 import './App.css';
 import Login from './components/Login';
-import Viewport from './components/Viewport';
 import helpers from './helpers.js';
 import box_data from './box.js'
 
@@ -20,7 +19,6 @@ class App extends Component {
     super(props);
     this.state = {
       isLoggedIn: false,
-      viewport: null,
     };
 
     this.initViewport = this.initViewport.bind(this);
@@ -86,8 +84,8 @@ class App extends Component {
   */
   initViewport() {
     // attach the viewport to the #div view
-    //var viewport = new window.FluxViewport(document.querySelector("#view"));
-    var viewport = new window.FluxViewport(this.view);
+    var viewport = new window.FluxViewport(document.querySelector("#view"));
+    //var viewport = new window.FluxViewport(this.view);
     // set up default lighting for the viewport
     viewport.setupDefaultLighting();
     // set the viewport background to white
@@ -95,9 +93,6 @@ class App extends Component {
 
     viewport.setGeometryEntity(box_data);
 
-    this.setState({
-      viewport: viewport,
-    });
   }
 
   render() {
@@ -117,10 +112,7 @@ class App extends Component {
             <Logout
               onClick={() => this.handleLogout()}
             />
-            <div id="view"
-              ref = {(view) => this.view = view}
-            >
-            </div>
+            <div id="view"></div>
           </div>
           :
           <Login
